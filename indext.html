@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Promoções e Campanhas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            border: 2px solid rgba(103, 126, 234, 0.2);
+        }
+
+        .section h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: #667eea;
+        }
+
+        .file-input-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px 25px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            border: none;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid rgba(103, 126, 234, 0.3);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid rgba(46, 204, 113, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .results h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .status.info {
+            background: rgba(52, 152, 219, 0.1);
+            color: #2980b9;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .status.warning {
+            background: rgba(241, 196, 15, 0.1);
+            color: #f39c12;
+            border: 1px solid rgba(241, 196, 15, 0.3);
+        }
+
+        .list {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .list-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            font-family: 'Courier New', monospace;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .discount-highlight {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .comparison-section {
+            border-top: 2px dashed #bdc3c7;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .comparison-preview {
+            margin-top: 15px;
+            border-left: 4px solid #f39c12 !important;
+            background: rgba(243, 156, 18, 0.05) !important;
+        }
+
+        .main-file-preview {
+            border-left: 4px solid #27ae60 !important;
+            background: rgba(46, 204, 113, 0.05) !important;
+        }
+
+        .section-title {
+            color: #34495e;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .separator-line {
+            border-top: 2px dashed #bdc3c7;
+            margin: 20px 0;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificador de Promoções e Campanhas</h1>
+        
+        <div class="section">
+            <h3>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+                1. Carregar Arquivo de Promoções/Campanhas
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="file-input-container">
+                    <input type="file" id="promoFile" class="file-input" accept=".csv" />
+                    <label for="promoFile" class="file-input-label" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">
+                        🏷️ CSV Promoção
+                    </label>
+                    <p style="text-align: center; font-size: 12px; margin-top: 5px; color: #7f8c8d;">
+                        Formato: codigo;promo
+                    </p>
+                </div>
+                <div class="file-input-container">
+                    <input type="file" id="campaignFile" class="file-input" accept=".csv" />
+                    <label for="campaignFile" class="file-input-label" style="background: linear-gradient(45deg, #27ae60, #229954);">
+                        📢 CSV Campanha
+                    </label>
+                    <p style="text-align: center; font-size: 12px; margin-top: 5px; color: #7f8c8d;">
+                        Formato: id,cod,min,max,discount
+                    </p>
+                </div>
+            </div>
+            <div id="fileStatus"></div>
+        </div>
+
+        <div class="section">
+            <h3>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"/>
+                </svg>
+                2. Códigos para Verificar
+            </h3>
+            
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #34495e; margin-bottom: 10px;">📝 Opção A: Colar códigos manualmente</h4>
+                <textarea 
+                    id="externalReferences" 
+                    class="textarea" 
+                    placeholder="OPÇÃO A: Cole aqui os códigos para verificar, um por linha:&#10;&#10;120120120&#10;12919295451C9&#10;ABC123&#10;&#10;(Esta opção é independente da Opção B abaixo)"
+                ></textarea>
+                <p style="color: #7f8c8d; font-size: 14px; margin-top: 10px;">
+                    💡 Cole os códigos um por linha ou separados por vírgula
+                </p>
+            </div>
+
+            <div style="border-top: 2px dashed #bdc3c7; padding-top: 15px;">
+                <h4 style="color: #34495e; margin-bottom: 10px;">📄 Opção B: Upload de CSV para comparação</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="file-input-container">
+                        <input type="file" id="comparePromoFile" class="file-input" accept=".csv" />
+                        <label for="comparePromoFile" class="file-input-label" style="background: linear-gradient(45deg, #f39c12, #e67e22); font-size: 14px; padding: 10px 15px;">
+                            🏷️ Comparar CSV Promoção
+                        </label>
+                    </div>
+                    <div class="file-input-container">
+                        <input type="file" id="compareCampaignFile" class="file-input" accept=".csv" />
+                        <label for="compareCampaignFile" class="file-input-label" style="background: linear-gradient(45deg, #9b59b6, #8e44ad); font-size: 14px; padding: 10px 15px;">
+                            📢 Comparar CSV Campanha
+                        </label>
+                    </div>
+                </div>
+                <p style="color: #7f8c8d; font-size: 12px; margin-top: 10px; text-align: center;">
+                    Use esta opção para comparar um novo arquivo com os dados já carregados
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M17,7H22V17H17V19A1,1 0 0,0 18,20H20V22H17.5C16.95,22 16,21.55 16,21C16,21.55 15.05,22 14.5,22H12V20H14A1,1 0 0,0 15,19V5A1,1 0 0,0 14,4H12V2H14.5C15.05,2 16,2.45 16,3C16,2.45 16.95,2 17.5,2H20V4H18A1,1 0 0,0 17,5V7M2,7H13V9H4V15H13V17H2V7M20,9H17V15H20V9M15,13H4V11H15V13Z"/>
+                </svg>
+                3. Verificar Descontos
+            </h3>
+            <button id="processBtn" class="btn" disabled>
+                🔍 Verificar Códigos e Descontos
+            </button>
+            <button id="clearBtn" class="btn">
+                🗑️ Limpar Tudo
+            </button>
+        </div>
+
+        <div id="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        let promotionData = new Map(); // codigo -> desconto
+        let campaignData = new Map();  // codigo -> desconto
+        let currentDataType = null;    // 'promotion' ou 'campaign'
+        let loadedFileName = '';
+        let comparisonCodes = [];      // códigos da Opção B
+        let comparisonFileName = '';   // nome do arquivo da Opção B
+
+        const promoFileInput = document.getElementById('promoFile');
+        const campaignFileInput = document.getElementById('campaignFile');
+        const comparePromoFileInput = document.getElementById('comparePromoFile');
+        const compareCampaignFileInput = document.getElementById('compareCampaignFile');
+        const textArea = document.getElementById('externalReferences');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const fileStatus = document.getElementById('fileStatus');
+        const results = document.getElementById('results');
+
+        // Event listeners
+        promoFileInput.addEventListener('change', (e) => handleFileUpload(e, 'promotion'));
+        campaignFileInput.addEventListener('change', (e) => handleFileUpload(e, 'campaign'));
+        comparePromoFileInput.addEventListener('change', (e) => handleComparisonFile(e, 'promotion'));
+        compareCampaignFileInput.addEventListener('change', (e) => handleComparisonFile(e, 'campaign'));
+        textArea.addEventListener('input', () => {
+            // Se o usuário edita a Opção A, limpar Opção B para manter independência
+            if (textArea.value.trim().length > 0 && comparisonCodes.length > 0) {
+                // Limpar comparação visual se usuário começar a usar Opção A
+                const comparisonPreview = document.querySelector('.comparison-preview');
+                if (comparisonPreview) {
+                    comparisonPreview.style.opacity = '0.5';
+                    comparisonPreview.style.filter = 'grayscale(50%)';
+                }
+            }
+            updateProcessButton();
+        });
+        processBtn.addEventListener('click', processData);
+        clearBtn.addEventListener('click', clearAll);
+
+        function handleFileUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showStatus(`Carregando arquivo de ${type === 'promotion' ? 'promoção' : 'campanha'}...`, 'info');
+            
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                delimiter: type === 'promotion' ? ';' : ',',
+                complete: function(results) {
+                    if (type === 'promotion') {
+                        parsePromotionData(results.data, file.name);
+                    } else {
+                        parseCampaignData(results.data, file.name);
+                    }
+                },
+                error: function(error) {
+                    showStatus('❌ Erro ao carregar arquivo: ' + error.message, 'error');
+                }
+            });
+        }
+
+        function parsePromotionData(data, fileName) {
+            promotionData.clear();
+            campaignData.clear();
+            currentDataType = 'promotion';
+            loadedFileName = fileName;
+            
+            let validRows = 0;
+            
+            data.forEach((row, index) => {
+                if (row.length >= 2 && row[0] && row[1]) {
+                    const codigo = row[0].toString().trim();
+                    const desconto = parseFloat(row[1].toString().replace(',', '.'));
+                    
+                    if (codigo && !isNaN(desconto)) {
+                        promotionData.set(codigo, desconto);
+                        validRows++;
+                    }
+                }
+            });
+
+            if (validRows > 0) {
+                showStatus(`✅ Arquivo de promoção carregado! ${validRows} produtos encontrados`, 'success');
+                showDataPreview();
+                updateProcessButton(); // Garantir que botão seja atualizado
+            } else {
+                showStatus('⚠️ Nenhum dado válido encontrado no arquivo de promoção', 'warning');
+            }
+        }
+
+        function parseCampaignData(data, fileName) {
+            promotionData.clear();
+            campaignData.clear();
+            currentDataType = 'campaign';
+            loadedFileName = fileName;
+            
+            let validRows = 0;
+            
+            // Pular header se existir
+            const startIndex = data[0] && data[0].some(cell => 
+                cell && cell.toString().toLowerCase().includes('cod')
+            ) ? 1 : 0;
+            
+            data.slice(startIndex).forEach((row, index) => {
+                if (row.length >= 5) {
+                    const codigo = row[1] ? row[1].toString().trim() : '';
+                    const desconto = parseFloat(row[4] ? row[4].toString().replace(',', '.') : '0');
+                    
+                    if (codigo && !isNaN(desconto)) {
+                        campaignData.set(codigo, desconto);
+                        validRows++;
+                    }
+                }
+            });
+
+            if (validRows > 0) {
+                showStatus(`✅ Arquivo de campanha carregado! ${validRows} produtos encontrados`, 'success');
+                showDataPreview();
+            } else {
+                showStatus('⚠️ Nenhum dado válido encontrado no arquivo de campanha', 'warning');
+            }
+            
+            updateProcessButton();
+        }
+
+        function handleComparisonFile(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!currentDataType) {
+                showStatus('⚠️ Primeiro carregue um arquivo principal (promoção ou campanha)', 'warning');
+                event.target.value = '';
+                return;
+            }
+
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                delimiter: type === 'promotion' ? ';' : ',',
+                complete: function(results) {
+                    const codes = extractCodesFromComparisonFile(results.data, type);
+                    if (codes.length > 0) {
+                        // NÃO preencher a textarea - manter Opção A e B independentes
+                        comparisonCodes = codes;
+                        comparisonFileName = file.name;
+                        showComparisonPreview(codes, file.name, type);
+                        updateProcessButton();
+                    } else {
+                        showStatus('⚠️ Nenhum código válido encontrado no arquivo de comparação', 'warning');
+                    }
+                },
+                error: function(error) {
+                    showStatus('❌ Erro ao carregar arquivo: ' + error.message, 'error');
+                }
+            });
+
+            // Limpar input após processar
+            event.target.value = '';
+        }
+
+        function extractCodesFromComparisonFile(data, type) {
+            const codes = [];
+            
+            if (type === 'promotion') {
+                data.forEach(row => {
+                    if (row.length >= 1 && row[0]) {
+                        const codigo = row[0].toString().trim();
+                        if (codigo) codes.push(codigo);
+                    }
+                });
+            } else { // campaign
+                const startIndex = data[0] && data[0].some(cell => 
+                    cell && cell.toString().toLowerCase().includes('cod')
+                ) ? 1 : 0;
+                
+                data.slice(startIndex).forEach(row => {
+                    if (row.length >= 2 && row[1]) {
+                        const codigo = row[1].toString().trim();
+                        if (codigo) codes.push(codigo);
+                    }
+                });
+            }
+            
+            return codes;
+        }
+
+        function showDataPreview() {
+            const dataMap = currentDataType === 'promotion' ? promotionData : campaignData;
+            const entries = Array.from(dataMap.entries()); // Todos os dados, não apenas 5
+            const typeLabel = currentDataType === 'promotion' ? 'Promoção' : 'Campanha';
+            
+            const previewHtml = `
+                <div class="status success main-file-preview">
+                    📊 <strong>ARQUIVO PRINCIPAL carregado (${typeLabel}):</strong>
+                    <div class="list" style="max-height: 300px; overflow-y: auto; background: rgba(46, 204, 113, 0.1);">
+                        ${entries.map(([codigo, desconto]) => 
+                            `<div class="list-item" style="color: #27ae60; font-weight: 500;">${codigo} → ${desconto}% de desconto</div>`
+                        ).join('')}
+                    </div>
+                    <p style="margin-top: 10px; font-size: 12px; color: #27ae60;">
+                        📊 Total: ${dataMap.size} produtos • Arquivo: ${loadedFileName}
+                    </p>
+                    <p style="margin-top: 5px; font-size: 11px; color: #95a5a6;">
+                        ✅ Este é o arquivo base que será usado para verificar os códigos
+                    </p>
+                </div>
+            `;
+            
+            fileStatus.innerHTML += previewHtml;
+        }
+
+        function showComparisonPreview(codes, fileName, type) {
+            const typeLabel = type === 'promotion' ? 'Promoção' : 'Campanha';
+            
+            const comparisonHtml = `
+                <div class="separator-line"></div>
+                <div class="status info comparison-preview">
+                    📄 <strong>OPÇÃO B ATIVADA - Arquivo de comparação (${typeLabel}):</strong>
+                    <div class="list" style="max-height: 200px; overflow-y: auto; background: rgba(243, 156, 18, 0.1);">
+                        ${codes.map(code => 
+                            `<div class="list-item" style="color: #e67e22; font-weight: 500;">${code}</div>`
+                        ).join('')}
+                    </div>
+                    <p style="margin-top: 10px; font-size: 12px; color: #e67e22;">
+                        🔍 ${codes.length} códigos extraídos • Arquivo: ${fileName}
+                    </p>
+                    <p style="margin-top: 5px; font-size: 11px; color: #95a5a6;">
+                        ✅ Opção B está pronta! Agora você pode clicar em "Verificar Códigos e Descontos"
+                    </p>
+                    <p style="margin-top: 5px; font-size: 10px; color: #95a5a6; font-style: italic;">
+                        💡 Opção A e B são independentes. Use uma ou ambas simultaneamente.
+                    </p>
+                </div>
+            `;
+            
+            fileStatus.innerHTML += comparisonHtml;
+        }
+
+        function updateProcessButton() {
+            const hasData = (promotionData.size > 0 || campaignData.size > 0);
+            const hasOptionA = textArea.value.trim().length > 0;
+            const hasOptionB = comparisonCodes.length > 0;
+            
+            // Liberar botão se tiver arquivo principal E (Opção A OU Opção B)
+            processBtn.disabled = !(hasData && (hasOptionA || hasOptionB));
+        }
+
+        function processData() {
+            const dataMap = currentDataType === 'promotion' ? promotionData : campaignData;
+            
+            if (dataMap.size === 0) {
+                showStatus('❌ Nenhum arquivo de dados carregado', 'error', true);
+                return;
+            }
+
+            // Obter códigos da Opção A ou Opção B
+            let inputCodes = [];
+            let sourceDescription = '';
+            
+            const optionACodes = parseInputCodes(textArea.value);
+            const optionBCodes = comparisonCodes;
+            
+            if (optionACodes.length > 0 && optionBCodes.length > 0) {
+                // Se ambas as opções têm códigos, usar Opção A + Opção B
+                inputCodes = [...new Set([...optionACodes, ...optionBCodes])]; // Remove duplicatas
+                sourceDescription = `Opção A (${optionACodes.length} códigos) + Opção B (${optionBCodes.length} códigos)`;
+            } else if (optionACodes.length > 0) {
+                // Usar apenas Opção A
+                inputCodes = optionACodes;
+                sourceDescription = `Opção A (inserido manualmente)`;
+            } else if (optionBCodes.length > 0) {
+                // Usar apenas Opção B
+                inputCodes = optionBCodes;
+                sourceDescription = `Opção B (${comparisonFileName})`;
+            }
+            
+            if (inputCodes.length === 0) {
+                showStatus('❌ Nenhum código válido inserido nas opções A ou B', 'error', true);
+                return;
+            }
+
+            showStatus(`🔄 Processando ${inputCodes.length} códigos de: ${sourceDescription}...`, 'info', true);
+
+            const found = [];
+            const notFound = [];
+
+            inputCodes.forEach(code => {
+                if (dataMap.has(code)) {
+                    found.push({
+                        codigo: code,
+                        desconto: dataMap.get(code)
+                    });
+                } else {
+                    notFound.push(code);
+                }
+            });
+
+            showResults(inputCodes.length, found, notFound, sourceDescription);
+        }
+
+        function parseInputCodes(input) {
+            return input
+                .split(/[\n,]/)
+                .map(code => code.trim())
+                .filter(code => code.length > 0);
+        }
+
+        function showResults(total, found, notFound, sourceDescription) {
+            const typeLabel = currentDataType === 'promotion' ? 'Promoção' : 'Campanha';
+            
+            const resultsHtml = `
+                <div class="results">
+                    <h4>📊 Resultados da Verificação (${typeLabel})</h4>
+                    
+                    <div class="status info">
+                        📈 <strong>Estatísticas:</strong><br>
+                        • Total de códigos verificados: ${total}<br>
+                        • Encontrados com desconto: ${found.length}<br>
+                        • NÃO encontrados: ${notFound.length}<br>
+                        • Fonte: ${sourceDescription}<br>
+                        • Arquivo base: ${loadedFileName}
+                    </div>
+
+                    ${found.length > 0 ? `
+                        <div class="status success">
+                            ✅ <strong>Códigos ENCONTRADOS com desconto (${found.length}):</strong>
+                            <div class="list">
+                                ${found.map(item => 
+                                    `<div class="list-item">
+                                        <strong>${item.codigo}</strong> → 
+                                        <span style="color: #27ae60; font-weight: bold;">${item.desconto}% OFF</span>
+                                    </div>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${notFound.length > 0 ? `
+                        <div class="status warning">
+                            ⚠️ <strong>Códigos NÃO ENCONTRADOS (${notFound.length}):</strong>
+                            <div class="list">
+                                ${notFound.map(code => `<div class="list-item">${code}</div>`).join('')}
+                            </div>
+                            <div style="text-align: center; margin-top: 15px;">
+                                <button id="downloadBtn" class="btn" style="background: linear-gradient(45deg, #3498db, #2980b9);">
+                                    📥 BAIXAR CSV COM CÓDIGOS NÃO ENCONTRADOS
+                                </button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="status success">
+                            🎉 Todos os códigos foram encontrados!
+                        </div>
+                    `}
+                </div>
+            `;
+
+            results.innerHTML = resultsHtml;
+            results.style.display = 'block';
+
+            // Adicionar evento ao botão de download se existir
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    generateNotFoundCsv(notFound);
+                });
+            }
+        }
+
+        function generateNotFoundCsv(codes) {
+            if (codes.length === 0) return;
+
+            const csvContent = 'codigo\n' + codes.join('\n');
+            downloadCsv(csvContent, 'codigos_nao_encontrados.csv');
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (downloadBtn) {
+                downloadBtn.innerHTML = '✅ ARQUIVO BAIXADO!';
+                setTimeout(() => {
+                    downloadBtn.innerHTML = '📥 BAIXAR CSV COM CÓDIGOS NÃO ENCONTRADOS';
+                }, 3000);
+            }
+        }
+
+        function downloadCsv(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function showStatus(message, type, append = false) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+            
+            if (append) {
+                fileStatus.appendChild(statusDiv);
+            } else {
+                fileStatus.innerHTML = '';
+                fileStatus.appendChild(statusDiv);
+            }
+        }
+
+        function clearAll() {
+            promotionData.clear();
+            campaignData.clear();
+            currentDataType = null;
+            loadedFileName = '';
+            comparisonCodes = [];
+            comparisonFileName = '';
+            
+            promoFileInput.value = '';
+            campaignFileInput.value = '';
+            comparePromoFileInput.value = '';
+            compareCampaignFileInput.value = '';
+            textArea.value = '';
+            fileStatus.innerHTML = '';
+            results.style.display = 'none';
+            processBtn.disabled = true;
+            
+            showStatus('🗑️ Todos os dados foram limpos! Pronto para nova operação.', 'info');
+        }
+
+        // Função global para ser chamada pelo menu
+        window.clearAll = clearAll;
+    </script>
+</body>
+</html>
